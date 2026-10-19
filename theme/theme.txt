@@ -1,13 +1,9 @@
 # ==============================================================================
 # INFERNAL — Cinematic Universal GRUB Theme (Type C: Lower-Water Ritual Console)
 # ==============================================================================
-# Preserves the Jenkins Devil RAM-Sacrifice Summoning Scene (y = 0%..62%)
-# completely unobstructed, placing the ornate crimson-and-gold banner console
-# in the dark reflective ocean below the central island (y = 64%..90%).
-# ==============================================================================
 
 title-text: ""
-desktop-image: "backgrounds/infernal.png"
+desktop-image: "background.png"
 desktop-color: "#0a0203"
 
 terminal-font: "DejaVu Sans Mono Regular 14"
@@ -15,12 +11,12 @@ terminal-left: "10%"
 terminal-top: "10%"
 terminal-width: "80%"
 terminal-height: "80%"
-terminal-border: "1"
+terminal-border: "0"
 
 # Subtle Ritual Header Title
 + label {
     left = 25%
-    top = 60%
+    top = 59%
     width = 50%
     height = 22
     align = "center"
@@ -32,48 +28,44 @@ terminal-border: "1"
 # Top Ritual Compass Sigil (sits in the dark water just below the skull island)
 + image {
     left = 50%-210
-    top = 62%
+    top = 61%
     width = 420
     height = 28
-    file = "assets/ornaments/header_sigil.png"
+    file = "header_sigil.png"
 }
 
 # Primary Boot Menu — Type C Ornate Lower-Water Banner Console
 + boot_menu {
-    left = 23%
-    top = 65%
-    width = 54%
-    height = 24%
+    left = 22%
+    top = 64%
+    width = 56%
+    height = 26%
 
     item_font = "DejaVu Serif Regular 16"
     item_color = "#e0ceb8"
     selected_item_font = "DejaVu Serif Bold 18"
     selected_item_color = "#faeedc"
 
-    icon_width = 32
-    icon_height = 32
-    item_icon_space = 16
-    item_height = 46
-    item_padding = 6
-    item_spacing = 6
+    icon_width = 28
+    icon_height = 28
+    item_icon_space = 14
+    item_height = 38
+    item_padding = 2
+    item_spacing = 4
 
-    menu_pixmap_style = "assets/borders/menu_*.png"
-    item_pixmap_style = "assets/item/item_*.png"
-    selected_item_pixmap_style = "assets/selection/select_*.png"
+    item_pixmap_style = "item_*.png"
+    selected_item_pixmap_style = "select_*.png"
 
-    scrollbar = true
-    scrollbar_width = 12
-    scrollbar_frame = "assets/scrollbar/scrollbar_frame_*.png"
-    scrollbar_thumb = "assets/scrollbar/scrollbar_thumb_*.png"
+    scrollbar = false
 }
 
 # Lower Divider Ornament with 4-Point Compass Star
 + image {
     left = 50%-320
-    top = 90%
+    top = 91%
     width = 640
     height = 20
-    file = "assets/ornaments/footer_divider.png"
+    file = "footer_divider.png"
 }
 
 # Compact Keyboard Navigation Hints
@@ -81,27 +73,22 @@ terminal-border: "1"
     left = 15%
     top = 93%
     width = 70%
-    height = 24
+    height = 22
     align = "center"
     text = "[ ↑ ↓ ] Select     [ Enter ] Boot     [ e ] Edit     [ c ] GRUB Console"
     color = "#e0ccb2"
     font = "DejaVu Serif Regular 16"
 }
 
-# Ritual Timeout Progress Bar & Countdown
-+ progress_bar {
+# Ritual Countdown Label
++ label {
     id = "__timeout__"
-    left = 35%
+    left = 25%
     top = 96%
-    width = 30%
-    height = 14
-    text = "@TIMEOUT_NOTIFICATION_SHORT@"
-    fg_color = "#b92018"
-    bg_color = "#120406"
-    border_color = "#a87644"
-    text_color = "#d8c6b2"
+    width = 50%
+    height = 20
+    align = "center"
+    text = "Automatically booting in %d seconds"
+    color = "#c89664"
     font = "DejaVu Serif Regular 16"
-    bar_style = "assets/progress/progress_frame_*.png"
-    highlight_style = "assets/progress/progress_hl_*.png"
 }
-

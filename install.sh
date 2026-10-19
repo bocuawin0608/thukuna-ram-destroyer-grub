@@ -361,12 +361,16 @@ run_install_mode() {
     create_backup "${GRUB_DEFAULT_FILE}" "${GRUB_CFG_PATH}"
     ROLLBACK_ARMED="true"
 
-    # Step 7: Install theme assets into dedicated directory
+    # Step 7: Install theme assets into dedicated directory (clean any stale files in infernal dir first)
+    if [[ -d "${target_theme_dir}" && "${target_theme_dir}" == */themes/infernal ]]; then
+        rm -rf "${target_theme_dir}"
+    fi
     mkdir -p "${target_theme_dir}"
     INSTALLED_THEME_DIR="${target_theme_dir}"
     cp -r "${SCRIPT_DIR}/theme/"* "${target_theme_dir}/"
     if [[ "${bg_src}" != "${SCRIPT_DIR}/theme/backgrounds/infernal.png" ]]; then
         cp "${bg_src}" "${target_theme_dir}/backgrounds/infernal.png"
+        cp "${bg_src}" "${target_theme_dir}/background.png"
     fi
 
     # Optional test hook to simulate mid-installation interruption and verify rollback
@@ -451,7 +455,15 @@ run_uninstall_mode() {
 }
 
 main() {
+    local orig_args=("$@")
     parse_args "$@"
+    if [[ "${INFERNAL_ROOT}" == "/" && "${EUID}" -ne 0 && ( "${MODE}" == "--install" || "${MODE}" == "--uninstall" ) ]]; then
+        if [[ -t 0 ]]; then
+            exec sudo "$0" "${orig_args[@]}"
+        elif [[ -x "/usr/bin/lxqt-openssh-askpass" && -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
+            SUDO_ASKPASS="/usr/bin/lxqt-openssh-askpass" exec sudo -A "$0" "${orig_args[@]}"
+        fi
+    fi
     case "${MODE}" in
         --check)     run_check_mode ;;
         --dry-run)   run_dry_run_mode ;;

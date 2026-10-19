@@ -184,7 +184,7 @@ def generate_backgrounds() -> None:
     fb.save(BG_DIR / "fallback.png", format="PNG", optimize=True)
 
 
-def save_9slice(img: Image.Image, prefix: str, out_dir: Path, cw: int, ch: int) -> None:
+def save_9slice(img: Image.Image, prefix: str, out_dir: Path, cw: int, ch: int, root_3slice: bool = False) -> None:
     w, h = img.size
     boxes = {
         "nw": (0, 0, cw, ch),
@@ -199,7 +199,28 @@ def save_9slice(img: Image.Image, prefix: str, out_dir: Path, cw: int, ch: int) 
     }
     for part, box in boxes.items():
         crop = img.crop(box)
-        crop.save(out_dir / f"{prefix}_{part}.png", format="PNG", optimize=True)
+        out_file = out_dir / f"{prefix}_{part}.png"
+        crop.save(out_file, format="PNG", optimize=True)
+        # Clean up any old 9-slice files in THEME_DIR root first
+        old_root = THEME_DIR / f"{prefix}_{part}.png"
+        if old_root.exists():
+            old_root.unlink()
+
+    if root_3slice:
+        # For GRUB horizontal item boxes (like loq-15arp10e & LiquidGlass),
+        # only _w.png, _c.png, _e.png with full height (0..h) are placed in theme root
+        # so top_pad=0 and bottom_pad=0 and items never overlap vertically!
+        boxes_3 = {
+            "w": (0, 0, cw, h),
+            "c": (cw, 0, w - cw, h),
+            "e": (w - cw, 0, w, h),
+        }
+        for part, box in boxes_3.items():
+            crop = img.crop(box)
+            crop.save(THEME_DIR / f"{prefix}_{part}.png", format="PNG", optimize=True)
+    else:
+        for part in boxes:
+            shutil.copy2(out_dir / f"{prefix}_{part}.png", THEME_DIR / f"{prefix}_{part}.png")
 
 
 def generate_menu_9slice() -> None:
@@ -299,20 +320,19 @@ def generate_selection_9slice() -> None:
     """
     Type C active boot entry banner (exact match to devil-jenkins.png Panel C):
     - Wide bevelled crimson-and-gold double-bordered ritual box
-    - Left and right ornate 76px flame/filigree wing flourishes in select_w and select_e
-    - Distinct bronze/gold diamond indicator so selection is unmistakable
+    - Left and right ornate flame/filigree wing flourishes in select_w and select_e
+    - Distinct bronze/gold diamond indicator inside select_e so it is never stretched
     """
-    w, h = 320, 58
-    cw, ch = 92, 14
+    w, h = 320, 44
+    cw, ch = 104, 10
     img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
 
-    bx0, by0 = 80, 4
-    bx1, by1 = w - 81, h - 5
-    chamfer = 9
+    bx0, by0 = 76, 3
+    bx1, by1 = w - 77, h - 4
+    chamfer = 8
 
-    # Soft outer crimson aura
-    for grow, alpha in [(4, 45), (3, 75), (2, 115), (1, 165)]:
+    for grow, alpha in [(3, 55), (2, 105), (1, 160)]:
         pts_glow = [
             (bx0 - grow + chamfer, by0 - grow),
             (bx1 + grow - chamfer, by0 - grow),
@@ -325,7 +345,6 @@ def generate_selection_9slice() -> None:
         ]
         d.polygon(pts_glow, outline=(220, 38, 26, alpha))
 
-    # Main banner fill (deep dark charcoal-crimson matching Panel C)
     pts_box = [
         (bx0 + chamfer, by0),
         (bx1 - chamfer, by0),
@@ -338,10 +357,9 @@ def generate_selection_9slice() -> None:
     ]
     d.polygon(pts_box, fill=(28, 5, 7, 244), outline=(234, 176, 102, 250))
 
-    # Inner gold/crimson double frame
     ibx0, iby0 = bx0 + 3, by0 + 3
     ibx1, iby1 = bx1 - 3, by1 - 3
-    ichamfer = 7
+    ichamfer = 6
     pts_inner = [
         (ibx0 + ichamfer, iby0),
         (ibx1 - ichamfer, iby0),
@@ -354,16 +372,14 @@ def generate_selection_9slice() -> None:
     ]
     d.polygon(pts_inner, fill=(20, 4, 6, 246), outline=(192, 42, 32, 225))
 
-    # Corner gold bracket ornaments
     for cx, cy in [(bx0 + chamfer, by0), (bx1 - chamfer, by0), (bx0 + chamfer, by1), (bx1 - chamfer, by1)]:
         d.rectangle([cx - 1, cy - 1, cx + 1, cy + 1], fill=(255, 220, 142, 255))
 
-    # Lateral flame-filigree wings (Type C signature element)
     cy_mid = h // 2
     draw_lateral_wing(d, bx0, cy_mid, direction=-1)
     draw_lateral_wing(d, bx1, cy_mid, direction=+1)
 
-    # Inner right-side bronze diamond marker (non-color-only active indicator)
+    # Inner right-side bronze diamond marker (at x = w - 91, inside select_e which is x = 216..320)
     dm_x = bx1 - 14
     dm_y = cy_mid
     d.polygon(
@@ -373,23 +389,22 @@ def generate_selection_9slice() -> None:
     )
     d.rectangle([dm_x - 1, dm_y - 1, dm_x + 1, dm_y + 1], fill=(255, 224, 150, 255))
 
-    save_9slice(img, "select", SELECT_DIR, cw, ch)
+    save_9slice(img, "select", SELECT_DIR, cw, ch, root_3slice=True)
 
 
 def generate_item_9slice() -> None:
     """
     Unselected items in Type C sit cleanly in the darkened water below the banner
-    with horizontal padding matching the 92px wing inset of select_*.png.
+    with horizontal padding matching the 104px wing inset of select_*.png.
     """
-    w, h = 320, 42
-    cw, ch = 92, 10
+    w, h = 320, 36
+    cw, ch = 104, 8
     img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    # Subtle dark-crimson hairline separator with small bronze side ticks
-    d.line([(96, h - 2), (w - 96, h - 2)], fill=(150, 58, 44, 75), width=1)
-    d.rectangle([94, h - 3, 96, h - 1], fill=(212, 154, 92, 130))
-    d.rectangle([w - 97, h - 3, w - 95, h - 1], fill=(212, 154, 92, 130))
-    save_9slice(img, "item", ITEM_DIR, cw, ch)
+    d.line([(88, h - 2), (w - 89, h - 2)], fill=(150, 58, 44, 75), width=1)
+    d.rectangle([86, h - 3, 88, h - 1], fill=(212, 154, 92, 140))
+    d.rectangle([w - 89, h - 3, w - 87, h - 1], fill=(212, 154, 92, 140))
+    save_9slice(img, "item", ITEM_DIR, cw, ch, root_3slice=True)
 
 
 def generate_scrollbar_and_progress() -> None:
@@ -444,6 +459,7 @@ def generate_ornaments() -> None:
         d.point((w - 1 - x, cy), fill=(208, 150, 88, a))
     draw_compass_star(d, cx, cy, 9, 2)
     sigil.save(ORN_DIR / "header_sigil.png", format="PNG", optimize=True)
+    shutil.copy2(ORN_DIR / "header_sigil.png", THEME_DIR / "header_sigil.png")
 
     fw, fh = 640, 20
     fdiv = Image.new("RGBA", (fw, fh), (0, 0, 0, 0))
@@ -456,6 +472,7 @@ def generate_ornaments() -> None:
         fd.point((fw - 1 - x, fcy), fill=(208, 152, 92, a))
     draw_compass_star(fd, fcx, fcy, 6, 2)
     fdiv.save(ORN_DIR / "footer_divider.png", format="PNG", optimize=True)
+    shutil.copy2(ORN_DIR / "footer_divider.png", THEME_DIR / "footer_divider.png")
 
 
 def generate_icons() -> None:

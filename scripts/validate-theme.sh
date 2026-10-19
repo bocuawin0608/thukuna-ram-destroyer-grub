@@ -100,15 +100,22 @@ validate_theme_dir() {
         fi
     done < <(sed -n 's/^[[:space:]]*file[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' "${theme_txt}")
 
-    # 5. Validate 9-slice pixmap styles (*_*.png)
+    # 5. Validate pixmap styles (*_*.png: require at least w, c, e slices; validate any optional corner/edge slices present)
     while IFS= read -r wildcard_rel; do
         [[ -z "${wildcard_rel}" ]] && continue
         local prefix="${wildcard_rel%\*.png}"
         local slice
-        for slice in nw n ne w c e sw s se; do
+        for slice in w c e; do
             local slice_path="${theme_dir}/${prefix}${slice}.png"
             if ! check_png_magic "${slice_path}"; then
                 printf '[ERROR] Missing or invalid 9-slice asset: %s\n' "${slice_path}" >&2
+                errors=$((errors + 1))
+            fi
+        done
+        for slice in nw n ne sw s se; do
+            local slice_path="${theme_dir}/${prefix}${slice}.png"
+            if [[ -e "${slice_path}" ]] && ! check_png_magic "${slice_path}"; then
+                printf '[ERROR] Invalid optional 9-slice asset: %s\n' "${slice_path}" >&2
                 errors=$((errors + 1))
             fi
         done
@@ -133,6 +140,24 @@ validate_theme_dir() {
 
     if (( pf2_count == 0 )); then
         printf '[ERROR] No valid .pf2 font files found in %s/fonts\n' "${theme_dir}" >&2
+        errors=$((errors + 1))
+    fi
+
+    # 6b. Verify root-level .pf2 and .png files exist for /etc/grub.d/00_header compatibility
+    local root_pf2_count=0
+    local rpf2
+    for rpf2 in "${theme_dir}"/*.pf2; do
+        [[ -e "${rpf2}" ]] || continue
+        if check_pf2_magic "${rpf2}"; then
+            root_pf2_count=$((root_pf2_count + 1))
+        fi
+    done
+    if (( root_pf2_count == 0 )); then
+        printf '[ERROR] No root-level .pf2 fonts in %s/*.pf2 (/etc/grub.d/00_header requires "$themedir"/*.pf2)\n' "${theme_dir}" >&2
+        errors=$((errors + 1))
+    fi
+    if ! check_png_magic "${theme_dir}/background.png"; then
+        printf '[ERROR] Missing root-level %s/background.png (/etc/grub.d/00_header requires "$themedir"/*.png for insmod png)\n' "${theme_dir}" >&2
         errors=$((errors + 1))
     fi
 
@@ -161,6 +186,17 @@ validate_grub_cfg() {
         return 1
     fi
 
+    if grep -Eq '^[[:space:]]*set[[:space:]]+theme=' "${cfg_file}"; then
+        if ! grep -Eq '^[[:space:]]*insmod[[:space:]]+png' "${cfg_file}"; then
+            printf '[ERROR] Generated %s sets a theme but is missing "insmod png"!\n' "${cfg_file}" >&2
+            return 1
+        fi
+        if ! grep -Eq '^[[:space:]]*loadfont[[:space:]]+' "${cfg_file}"; then
+            printf '[ERROR] Generated %s sets a theme but is missing "loadfont" statements!\n' "${cfg_file}" >&2
+            return 1
+        fi
+    fi
+
     run_system_detection
     if [[ -n "${GRUB_SCRIPT_CHECK_BIN}" ]]; then
         if ! "${GRUB_SCRIPT_CHECK_BIN}" "${cfg_file}"; then
@@ -169,7 +205,7 @@ validate_grub_cfg() {
         fi
     fi
 
-    printf '[OK] GRUB configuration syntax validated (%s).\n' "${cfg_file}"
+    printf '[OK] GRUB configuration syntax and theme module/font loading validated (%s).\n' "${cfg_file}"
     return 0
 }
 

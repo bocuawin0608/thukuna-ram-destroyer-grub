@@ -113,7 +113,7 @@ assert_contains "${out}" "read-only or not writable" "Read-only configuration di
 # 6. Missing theme asset detection in validate-theme.sh
 bad_theme="$(mktemp -d)"; SANDBOXES+=("${bad_theme}")
 cp -r "${PROJECT_ROOT}/theme/"* "${bad_theme}/"
-rm -f "${bad_theme}/assets/selection/select_w.png"
+rm -f "${bad_theme}/select_w.png" "${bad_theme}/assets/selection/select_w.png"
 set +e
 out="$("${PROJECT_ROOT}/scripts/validate-theme.sh" "${bad_theme}" 2>&1)"
 rc=$?
